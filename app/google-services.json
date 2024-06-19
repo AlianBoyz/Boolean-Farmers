@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "749172350161",
+    "project_id": "boolean-farmers",
+    "storage_bucket": "boolean-farmers.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:749172350161:android:78980a46364e057ce4f9f0",
+        "android_client_info": {
+          "package_name": "com.example.booleanfarmers"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB__0SdcSFPexiANPaRvKb9_lPy04cdjUY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

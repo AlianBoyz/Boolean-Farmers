@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".Login_farmer">
+
+    <ImageView
+        android:id="@+id/imageView2"
+        android:layout_width="800dp"
+        android:layout_height="483dp"
+        android:alpha="0.5"
+        android:src="@drawable/trees"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.501"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.669" />
+
+    <TextView
+        android:id="@+id/textView4"
+        android:layout_width="116dp"
+        android:layout_height="40dp"
+        android:background="@drawable/farmer_login_txt"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.498"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.118" />
+
+    <EditText
+        android:id="@+id/l_namef"
+        android:layout_width="230dp"
+        android:layout_height="34dp"
+        android:layout_marginTop="113dp"
+        android:background="@drawable/txt_box"
+        android:ems="10"
+        android:hint="Enter name"
+        android:inputType="text"
+        android:paddingStart="10dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.497"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/textView4"
+        app:layout_constraintVertical_bias="0.049" />
+
+    <EditText
+        android:id="@+id/l_passf"
+        android:layout_width="230dp"
+        android:layout_height="34dp"
+        android:background="@drawable/txt_box"
+        android:ems="10"
+        android:hint="Enter Password"
+        android:inputType="textPassword"
+        android:paddingStart="10dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.497"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.39" />
+
+    <TextView
+        android:id="@+id/textView5"
+        android:layout_width="147dp"
+        android:layout_height="12dp"
+        android:layout_marginBottom="244dp"
+        android:background="@drawable/txt_acc"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/l_passf"
+        app:layout_constraintVertical_bias="0.988" />
+
+    <Button
+        android:id="@+id/f_sign"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/sign_btn"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/f_login"
+        app:layout_constraintVertical_bias="0.435" />
+
+    <Button
+        android:id="@+id/f_login"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/login_btn"
+        app:layout_constraintBottom_toBottomOf="@+id/textView5"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/l_passf"
+        app:layout_constraintVertical_bias="0.177" />
+</androidx.constraintlayout.widget.ConstraintLayout>
