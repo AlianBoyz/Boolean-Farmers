@@ -1,13 +1,14 @@
 {
   "project_info": {
-    "project_number": "749172350161",
-    "project_id": "boolean-farmers",
-    "storage_bucket": "boolean-farmers.appspot.com"
+    "project_number": "944340245602",
+    "firebase_url": "https://boolean-farers-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "boolean-farers",
+    "storage_bucket": "boolean-farers.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:749172350161:android:78980a46364e057ce4f9f0",
+        "mobilesdk_app_id": "1:944340245602:android:b8363df9bc4685969fc53b",
         "android_client_info": {
           "package_name": "com.example.booleanfarmers"
         }
@@ -15,7 +16,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyB__0SdcSFPexiANPaRvKb9_lPy04cdjUY"
+          "current_key": "AIzaSyDPcKP7xPS-Is6k2uDWpnyjCS2UIw3VGHc"
         }
       ],
       "services": {

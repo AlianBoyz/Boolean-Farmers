@@ -3,7 +3,6 @@ package com.example.booleanfarmers;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -23,11 +22,8 @@ import com.google.firebase.database.ValueEventListener;
 public class Login_farmer extends AppCompatActivity {
 
     private EditText lname, lpass;
+    private DatabaseReference databaseReference;
 
-    DatabaseReference reference;
-
-
-    @SuppressLint("MissingInflatedId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -35,6 +31,8 @@ public class Login_farmer extends AppCompatActivity {
 
         lname = findViewById(R.id.l_namef);
         lpass = findViewById(R.id.l_passf);
+
+        databaseReference = FirebaseDatabase.getInstance().getReference().child("farmers");
 
         Button f_sign = findViewById(R.id.f_sign);
         Button f_login = findViewById(R.id.f_login);
@@ -50,52 +48,50 @@ public class Login_farmer extends AppCompatActivity {
         f_login.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String name = lname.getText().toString().trim();
+                String phone = lname.getText().toString().trim();
                 String password = lpass.getText().toString().trim();
-
-                if (TextUtils.isEmpty(name) || TextUtils.isEmpty(password)) {
-                    Toast.makeText(Login_farmer.this, "Please enter email and password", Toast.LENGTH_SHORT).show();
+                if (TextUtils.isEmpty(phone) || TextUtils.isEmpty(password)) {
+                    Toast.makeText(Login_farmer.this, "Please enter phone number and password", Toast.LENGTH_SHORT).show();
                     return;
                 }
-                authenticateUser(name, password);
+                authenticateUser(phone, password);
             }
         });
     }
-    private void authenticateUser(String name, String password) {
-        DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference().child("Farmers");
 
-        // Query the database to find the user with the given email
-        Query query = databaseReference.orderByChild("Name").equalTo(name);
+    private void authenticateUser(String phone, String password) {
+        // Query the database to find the user with the given phone number
+        Query query = databaseReference.orderByChild("phone").equalTo(phone);
 
         query.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                 if (dataSnapshot.exists()) {
-                    // User with the given email found, now check password
+                    // User with the given phone number found, now check password
                     for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
-                        String dbPassword = snapshot.child("Password").getValue(String.class);
+                        String dbPassword = snapshot.child("password").getValue(String.class);
                         if (dbPassword != null && dbPassword.equals(password)) {
                             // Passwords match, login successful
                             Toast.makeText(Login_farmer.this, "Login Successful", Toast.LENGTH_SHORT).show();
-                            Intent intent=new Intent(Login_farmer.this,Capture.class);
-                            intent.putExtra("uname",name);
+                            Intent intent = new Intent(Login_farmer.this, Capture.class);
+                            intent.putExtra("uname", phone); // passing phone number as username
                             startActivity(intent);
                             finish();
                             // Proceed to next activity or perform necessary actions
-                        } else {
-                            // Password doesn't match
-                            Toast.makeText(Login_farmer.this, "Incorrect Password", Toast.LENGTH_SHORT).show();
+                            return;
                         }
                     }
+                    // Password doesn't match
+                    Toast.makeText(Login_farmer.this, "Incorrect Password", Toast.LENGTH_SHORT).show();
                 } else {
-                    // User with the given email not found
+                    // User with the given phone number not found
                     Toast.makeText(Login_farmer.this, "User not found", Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError databaseError) {
-                Log.e("Login_expert", "Database Error: " + databaseError.getMessage());
+                Log.e("Login_farmer", "Database Error: " + databaseError.getMessage());
             }
         });
     }

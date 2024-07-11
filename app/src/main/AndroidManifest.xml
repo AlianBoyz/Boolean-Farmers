@@ -9,9 +9,10 @@
         android:required="false" />
 
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.INTERNET" />
-
 
     <application
         android:allowBackup="true"
@@ -24,10 +25,14 @@
         android:theme="@style/Theme.BooleanFarmers"
         tools:targetApi="34">
         <activity
-            android:name=".View_page"
+            android:name=".problem_screen"
             android:exported="false" />
         <activity
             android:name=".Capture"
+            android:exported="false"
+            android:theme="@style/Theme.BooleanFarmers" />
+        <activity
+            android:name=".View_page"
             android:exported="false" />
         <activity
             android:name=".expert_signin"

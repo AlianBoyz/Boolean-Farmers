@@ -2,7 +2,6 @@ package com.example.booleanfarmers;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.camera.core.processing.SurfaceProcessorNode;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -13,16 +12,15 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.Query;
-import com.google.firebase.database.ValueEventListener;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.auth.AuthResult;
+import com.google.firebase.auth.FirebaseAuth;
 
 public class Login_expert extends AppCompatActivity {
 
     private EditText lemail, lpass;
+    private FirebaseAuth auth;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,6 +29,7 @@ public class Login_expert extends AppCompatActivity {
 
         lemail = findViewById(R.id.l_email);
         lpass = findViewById(R.id.l_pass);
+        auth = FirebaseAuth.getInstance();
 
         Button e_sign = findViewById(R.id.e_sign);
         Button e_login = findViewById(R.id.e_login);
@@ -57,39 +56,22 @@ public class Login_expert extends AppCompatActivity {
             }
         });
     }
+
     private void authenticateUser(String email, String password) {
-        DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference().child("Experts");
-
-        // Query the database to find the user with the given email
-        Query query = databaseReference.orderByChild("Email").equalTo(email);
-
-        query.addListenerForSingleValueEvent(new ValueEventListener() {
+        auth.signInWithEmailAndPassword(email, password).addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
             @Override
-            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                if (dataSnapshot.exists()) {
-                    // User with the given email found, now check password
-                    for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
-                        String dbPassword = snapshot.child("Password").getValue(String.class);
-                        if (dbPassword != null && dbPassword.equals(password)) {
-                            // Passwords match, login successful
-                            Toast.makeText(Login_expert.this, "Login Successful", Toast.LENGTH_SHORT).show();
-                            Intent intent=new Intent(Login_expert.this,View_page.class);
-                            startActivity(intent);
-                            // Proceed to next activity or perform necessary actions
-                        } else {
-                            // Password doesn't match
-                            Toast.makeText(Login_expert.this, "Incorrect Password", Toast.LENGTH_SHORT).show();
-                        }
-                    }
+            public void onComplete(@NonNull Task<AuthResult> task) {
+                if (task.isSuccessful()) {
+                    // Login successful
+                    Toast.makeText(Login_expert.this, "Login Successful", Toast.LENGTH_SHORT).show();
+                    Intent intent = new Intent(Login_expert.this, problem_screen.class);
+                    startActivity(intent);
+                    finish(); // Close the current activity
                 } else {
-                    // User with the given email not found
-                    Toast.makeText(Login_expert.this, "User not found", Toast.LENGTH_SHORT).show();
+                    // Login failed
+                    Log.e("Login_expert", "Login Failed: " + task.getException().getMessage());
+                    Toast.makeText(Login_expert.this, "Login Failed: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
                 }
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError databaseError) {
-                Log.e("Login_expert", "Database Error: " + databaseError.getMessage());
             }
         });
     }
