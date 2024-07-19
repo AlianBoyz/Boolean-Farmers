@@ -3,10 +3,11 @@ package com.example.booleanfarmers;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.widget.Button;
@@ -21,6 +22,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ImageCapture;
 import androidx.camera.core.ImageCaptureException;
+import androidx.camera.core.ImageProxy;
 import androidx.camera.core.Preview;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
@@ -28,19 +30,13 @@ import androidx.core.content.ContextCompat;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -56,23 +52,23 @@ public class Capture extends AppCompatActivity {
     private Button logout;
     private Button captureButton;
     private Button browseButton;
-    private TextView userName;
     private ImageCapture imageCapture;
     private FirebaseStorage firebaseStorage;
     private FirebaseAuth auth;
+    private TextView usernameTextView;
 
     private final ActivityResultLauncher<String[]> requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {
-                Boolean cameraPermission = result.getOrDefault(Manifest.permission.CAMERA, false);
-                Boolean readStoragePermission = result.getOrDefault(Manifest.permission.READ_EXTERNAL_STORAGE, false);
+                Boolean cameraPermission = null;
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                    cameraPermission = result.getOrDefault(Manifest.permission.CAMERA, false);
+                }
 
-                if (cameraPermission && readStoragePermission) {
+                if (cameraPermission) {
                     startCamera();
                 } else {
-                    Toast.makeText(this, "Permissions not granted by the user.", Toast.LENGTH_SHORT).show();
-                    Log.e(TAG, "Permissions not granted: " +
-                            "Camera: " + cameraPermission + ", " +
-                            "Read Storage: " + readStoragePermission);
+                    Toast.makeText(this, "Camera permission not granted by the user.", Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "Camera permission not granted: " + cameraPermission);
                     finish();
                 }
             });
@@ -86,24 +82,15 @@ public class Capture extends AppCompatActivity {
         captureButton = findViewById(R.id.captureButton);
         browseButton = findViewById(R.id.browseButton);
         logout = findViewById(R.id.logout_button);
-        userName = findViewById(R.id.UserName); // Assuming you have this TextView in your layout
-
-        // Initialize Firebase components
+        usernameTextView = findViewById(R.id.UserName);
         firebaseStorage = FirebaseStorage.getInstance();
         auth = FirebaseAuth.getInstance();
-        FirebaseUser user = auth.getCurrentUser();
-        if (user == null) {
-            Toast.makeText(Capture.this, "User details not available", Toast.LENGTH_LONG).show();
-        } else {
-            fetchUserProfile(user);
-        }
 
         if (allPermissionsGranted()) {
             startCamera();
         } else {
             requestPermissionLauncher.launch(new String[]{
-                    Manifest.permission.CAMERA,
-                    Manifest.permission.READ_EXTERNAL_STORAGE
+                    Manifest.permission.CAMERA
             });
         }
 
@@ -112,34 +99,6 @@ public class Capture extends AppCompatActivity {
         logout.setOnClickListener(view -> funcLogout());
         cameraExecutor = Executors.newSingleThreadExecutor();
     }
-
-    private void fetchUserProfile(FirebaseUser firebaseUser) {
-        String uid = firebaseUser.getUid();
-        DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference("farmers").child(uid);
-
-        databaseReference.addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                if (snapshot.exists()) {
-                    String name = snapshot.child("name").getValue(String.class);
-                    if (name != null) {
-                        userName.setText(name);
-                    } else {
-                        Toast.makeText(Capture.this, "User name not found", Toast.LENGTH_SHORT).show();
-                    }
-                } else {
-                    Toast.makeText(Capture.this, "User data not found", Toast.LENGTH_SHORT).show();
-                }
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                Toast.makeText(Capture.this, "Failed to fetch user data: " + error.getMessage(), Toast.LENGTH_SHORT).show();
-                Log.e(TAG, "Failed to fetch user data", error.toException());
-            }
-        });
-    }
-
 
     private void funcLogout() {
         auth.signOut();
@@ -150,7 +109,10 @@ public class Capture extends AppCompatActivity {
     }
 
     private void startCamera() {
-        ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(this);
+        ListenableFuture<ProcessCameraProvider> cameraProviderFuture = null;
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            cameraProviderFuture = ProcessCameraProvider.getInstance(this);
+        }
 
         cameraProviderFuture.addListener(() -> {
             try {
@@ -166,60 +128,90 @@ public class Capture extends AppCompatActivity {
         Preview preview = new Preview.Builder().build();
         imageCapture = new ImageCapture.Builder().build();
 
-        CameraSelector cameraSelector = new CameraSelector.Builder()
-                .requireLensFacing(CameraSelector.LENS_FACING_BACK)
-                .build();
+        CameraSelector cameraSelector = null;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            cameraSelector = new CameraSelector.Builder()
+                    .requireLensFacing(CameraSelector.LENS_FACING_BACK)
+                    .build();
+        }
 
-        preview.setSurfaceProvider(previewView.getSurfaceProvider());
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            preview.setSurfaceProvider(previewView.getSurfaceProvider());
+        }
 
-        cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageCapture);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageCapture);
+        }
     }
 
     private void takePhoto() {
-        File photoDir = new File(getExternalFilesDir(Environment.DIRECTORY_PICTURES), "BooleanFarmers");
-        if (!photoDir.exists() && !photoDir.mkdirs()) {
-            Log.e(TAG, "Failed to create directory for photos");
-            return;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            imageCapture.takePicture(ContextCompat.getMainExecutor(this), new ImageCapture.OnImageCapturedCallback() {
+                @Override
+                public void onCaptureSuccess(@NonNull ImageProxy image) {
+                    // Convert ImageProxy to bitmap
+                    Bitmap capturedBitmap = imageProxyToBitmap(image);
+
+                    // Resize bitmap to 256x256
+                    Bitmap resizedBitmap = Bitmap.createScaledBitmap(capturedBitmap, 256, 256, true);
+
+                    // Convert resized bitmap to byte array
+                    ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                    resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream);
+                    byte[] resizedBytes = stream.toByteArray();
+
+                    // Upload resized image to Firebase
+                    uploadImageToFirebase(resizedBytes);
+
+                    image.close();
+                }
+
+                @Override
+                public void onError(@NonNull ImageCaptureException exception) {
+                    Log.e(TAG, "Error capturing image", exception);
+                }
+            });
         }
+    }
 
-        File photoFile = new File(photoDir, "image_" + System.currentTimeMillis() + ".jpg");
+    private Bitmap imageProxyToBitmap(ImageProxy image) {
+        ImageProxy.PlaneProxy planeProxy = null;
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            planeProxy = image.getPlanes()[0];
+        }
+        ByteBuffer buffer = null;
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            buffer = planeProxy.getBuffer();
+        }
+        byte[] bytes = new byte[buffer.remaining()];
+        buffer.get(bytes);
+        return BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+    }
 
-        ImageCapture.OutputFileOptions outputFileOptions = new ImageCapture.OutputFileOptions.Builder(photoFile).build();
 
-        imageCapture.takePicture(outputFileOptions, ContextCompat.getMainExecutor(this), new ImageCapture.OnImageSavedCallback() {
-            @Override
-            public void onImageSaved(@NonNull ImageCapture.OutputFileResults outputFileResults) {
-                Uri savedUri = Uri.fromFile(photoFile);
-                String msg = "Photo saved: " + savedUri;
-                Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
-                uploadImageToFirebase(photoFile);
-            }
 
-            @Override
-            public void onError(@NonNull ImageCaptureException exception) {
-                Log.e(TAG, "Error capturing image", exception);
-            }
+    private void uploadImageToFirebase(byte[] imageData) {
+        StorageReference storageReference = firebaseStorage.getReference().child("images/" + System.currentTimeMillis() + ".jpg");
+        UploadTask uploadTask = storageReference.putBytes(imageData);
+        uploadTask.addOnSuccessListener(taskSnapshot -> {
+            storageReference.getDownloadUrl().addOnSuccessListener(uri -> {
+                String downloadUrl = uri.toString();
+                Log.d(TAG, "Image uploaded to Firebase: " + downloadUrl);
+                Toast.makeText(Capture.this, "Image uploaded to Firebase", Toast.LENGTH_SHORT).show();
+                openPostActivity(downloadUrl);
+            });
+        }).addOnFailureListener(e -> {
+            Log.e(TAG, "Failed to upload image to Firebase", e);
+            Toast.makeText(Capture.this, "Failed to upload image to Firebase", Toast.LENGTH_SHORT).show();
         });
     }
 
-    private void uploadImageToFirebase(File photoFile) {
-        StorageReference storageReference = firebaseStorage.getReference().child("images/" + photoFile.getName());
-        try {
-            FileInputStream fileInputStream = new FileInputStream(photoFile);
-            UploadTask uploadTask = storageReference.putStream(fileInputStream);
-            uploadTask.addOnSuccessListener(taskSnapshot -> {
-                storageReference.getDownloadUrl().addOnSuccessListener(uri -> {
-                    String downloadUrl = uri.toString();
-                    Log.d(TAG, "Image uploaded to Firebase: " + downloadUrl);
-                    Toast.makeText(Capture.this, "Image uploaded to Firebase", Toast.LENGTH_SHORT).show();
-                });
-            }).addOnFailureListener(e -> {
-                Log.e(TAG, "Failed to upload image to Firebase", e);
-                Toast.makeText(Capture.this, "Failed to upload image to Firebase", Toast.LENGTH_SHORT).show();
-            });
-        } catch (FileNotFoundException e) {
-            Log.e(TAG, "File not found for upload", e);
-        }
+
+
+    private void openPostActivity(String imageUrl) {
+        Intent intent = new Intent(Capture.this, Post.class);
+        intent.putExtra("imageUri", imageUrl);
+        startActivity(intent);
     }
 
     private void openGallery() {
@@ -236,37 +228,40 @@ public class Capture extends AppCompatActivity {
                 if (selectedImageUri != null) {
                     uploadImageToFirebase(selectedImageUri);
                 }
-            } else if (requestCode == REQUEST_CODE_IMAGE_CAPTURE) {
-                // Image captured from camera, already handled in takePhoto()
             }
         }
     }
 
     private void uploadImageToFirebase(Uri imageUri) {
-        StorageReference storageReference = firebaseStorage.getReference().child("images/" + System.currentTimeMillis() + ".jpg");
-        UploadTask uploadTask = storageReference.putFile(imageUri);
-        uploadTask.addOnSuccessListener(taskSnapshot -> {
-            storageReference.getDownloadUrl().addOnSuccessListener(uri -> {
-                String downloadUrl = uri.toString();
-                Log.d(TAG, "Image uploaded to Firebase: " + downloadUrl);
-                Toast.makeText(Capture.this, "Image uploaded to Firebase", Toast.LENGTH_SHORT).show();
+        try {
+            Bitmap bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), imageUri);
+            Bitmap resizedBitmap = Bitmap.createScaledBitmap(bitmap, 256, 256, false);
+
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
+            byte[] data = byteArrayOutputStream.toByteArray();
+
+            StorageReference storageReference = firebaseStorage.getReference().child("images/" + System.currentTimeMillis() + ".jpg");
+            UploadTask uploadTask = storageReference.putBytes(data);
+            uploadTask.addOnSuccessListener(taskSnapshot -> {
+                storageReference.getDownloadUrl().addOnSuccessListener(uri -> {
+                    String downloadUrl = uri.toString();
+                    Log.d(TAG, "Image uploaded to Firebase: " + downloadUrl);
+                    Toast.makeText(Capture.this, "Image uploaded to Firebase", Toast.LENGTH_SHORT).show();
+                    openPostActivity(downloadUrl);
+                });
+            }).addOnFailureListener(e -> {
+                Log.e(TAG, "Failed to upload image to Firebase", e);
+                Toast.makeText(Capture.this, "Failed to upload image to Firebase", Toast.LENGTH_SHORT).show();
             });
-        }).addOnFailureListener(e -> {
-            Log.e(TAG, "Failed to upload image to Firebase", e);
-            Toast.makeText(Capture.this, "Failed to upload image to Firebase", Toast.LENGTH_SHORT).show();
-        });
+        } catch (IOException e) {
+            Log.e(TAG, "Failed to resize and upload image", e);
+            Toast.makeText(Capture.this, "Failed to resize and upload image", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private boolean allPermissionsGranted() {
-        for (String permission : new String[]{
-                Manifest.permission.CAMERA,
-                Manifest.permission.READ_EXTERNAL_STORAGE
-        }) {
-            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
-                return false;
-            }
-        }
-        return true;
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
     }
 
     @Override
