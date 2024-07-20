@@ -1,4 +1,3 @@
-# This Project is under Process
 # Application-User-Inerface 
 
 ![Boolean_final_pages-to-jpg-0013](https://github.com/AlianBoyz/Boolean-Farmers/assets/118735686/1efda8f3-3018-460a-9346-724ec60de233)
